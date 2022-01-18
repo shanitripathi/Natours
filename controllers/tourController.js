@@ -1,76 +1,92 @@
 const fs = require('fs');
+const Tour = require('../models/tourModel');
 
-// READING THE RESOURCE FILE
+// It is a good practice to check for errors in middleware like invaild id so the request doesn't go the the next phase! it keeps the controllers clean
+// exports.checkValidId = (req, res, next, val) => {
+//   const id = val * 1;
+//   const tour = getTourWithId(id);
+//   if (!tour)
+//     return res.status(404).json({
+//       status: 'fail',
+//       data: 'Invalid ID',
+//     });
+//   next();
+// };
 
-const tours = JSON.parse(fs.readFileSync('./dev-data/data/tours-simple.json'));
-
-const getTourWithId = (id) => tours.find((tour) => tour.id === id);
-
-exports.checkRequestBody = (req, res, next) => {
-  if (req.body.name && req.body.difficulty && req.body.duration) {
-    next();
-  } else {
-    res.status(400).json({
+exports.getTours = async (req, res) => {
+  try {
+    const tours = await Tour.find();
+    res.status(200).json({
+      status: 'success',
+      results: tours.length,
+      data: {
+        tours,
+      },
+    });
+  } catch (err) {
+    res.status(404).json({
       status: 'fail',
-      message: 'Invalid Body',
+      message: err,
     });
   }
 };
 
-// It is a good practice to check for errors in middleware like invaild id so the request doesn't go the the next phase! it keeps the controllers clean
-exports.checkValidId = (req, res, next, val) => {
-  const id = val * 1;
-  const tour = getTourWithId(id);
-  if (!tour)
-    return res.status(404).json({
-      status: 'fail',
-      data: 'Invalid ID',
-    });
-  next();
-};
-
-exports.getTours = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data: {
-      tours,
-    },
-  });
-};
-
-exports.getTour = (req, res) => {
-  const tour = getTourWithId(req.params.id * 1);
-  res.json({
-    status: 'success',
-    data: {
-      tour,
-    },
-  });
-};
-
-exports.updateTour = (req, res) => {
-  const body = req.body;
-  const tour = getTourWithId(req.params.id * 1);
-
-  if (Object.keys(body).every((field) => Object.keys(tour).includes(field))) {
-    const updatedTour = {
-      ...tour,
-      ...body,
-    };
-
+exports.getTour = async (req, res) => {
+  try {
+    const tour = await Tour.findById(req.params.id);
+    //same as Tour.findOne({_id:req.params.id})
     res.json({
       status: 'success',
       data: {
-        tour: updatedTour,
+        tour,
       },
     });
-  } else {
+  } catch (err) {
     res.status(404).json({
       status: 'fail',
-      message: 'Incorrect Field',
+      message: 'invalid id',
     });
   }
+};
+
+exports.updateTour = async (req, res) => {
+  try {
+    const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    res.json({
+      status: 'success',
+      data: {
+        tour,
+      },
+    });
+  } catch (err) {
+    res.status(401).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+  // if (Object.keys(body).every((field) => Object.keys(tour).includes(field))) {
+  //   const updatedTour = {
+  //     ...tour,
+  //     ...body,
+  //   };
+
+  //   res.json({
+  //     status: 'success',
+  //     data: {
+  //       tour: updatedTour,
+  //     },
+  //   });
+  // } else {
+  //   res.status(404).json({
+  //     status: 'fail',
+  //     message: 'Incorrect Field',
+  //   });
+  // }
+
+  res.send('yes tour updated!!');
 };
 
 exports.deleteTour = (req, res) => {
@@ -83,27 +99,19 @@ exports.deleteTour = (req, res) => {
   });
 };
 
-exports.createTour = (req, res) => {
-  const newId = tours[tours.length - 1].id + 1;
-
-  const newTour = {
-    ...tours[1],
-    ...req.body,
-    id: newId,
-  };
-
-  tours.push(newTour);
-
-  fs.writeFile(
-    './dev-data/data/tours-simple.json',
-    JSON.stringify(tours),
-    (err) => {
-      res.status(201).json({
-        message: 'success',
-        data: {
-          tour: newTour,
-        },
-      });
-    }
-  );
+exports.createTour = async (req, res) => {
+  try {
+    const tour = await Tour.create(req.body);
+    res.status(201).json({
+      status: 'success',
+      data: {
+        tour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
 };
