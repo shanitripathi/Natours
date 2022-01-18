@@ -23,4 +23,21 @@ const tourSchema = new mongoose.Schema({
 
 const Tour = mongoose.model('tour', tourSchema);
 
+//documents can be created in 2 ways
+// const testTour = new Tour({
+//   ///your data here
+// });
+// testTour
+//   .save()
+//   .then((doc) => {
+//     console.log(doc);
+//   })
+//   .catch((err) => {
+//     console.log('there was an error while creating your doc');
+//   });
+
+//other way
+
+// Tour.create({}).then.catch
+
 module.exports = Tour;
