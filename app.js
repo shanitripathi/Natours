@@ -17,7 +17,7 @@ if (process.env.NODE_ENV === 'development') {
 // serve static files using express.static
 app.use(express.static(`${__dirname}/public`));
 
-//ROUTES
+//ROUTES Mounting
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 

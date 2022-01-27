@@ -13,9 +13,70 @@ const Tour = require('../models/tourModel');
 //   next();
 // };
 
+exports.aliasTopTours = (req, res, next) => {
+  req.query.limit = '5';
+  req.query.sort = '-ratingsAverage,price';
+  req.query.fields = 'name,price,ratingsAverage,summary,difficulty';
+  next();
+};
+
 exports.getTours = async (req, res) => {
   try {
-    const tours = await Tour.find();
+    //building the query
+    // 1. Filtering
+    const queryObj = { ...req.query };
+    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    excludedFields.forEach((ele) => {
+      return delete queryObj[ele];
+    });
+    // 2. Advance Filtering
+    let queryString = JSON.stringify(queryObj);
+    //replace all the operators with a $ in front of them
+    queryString = queryString.replace(
+      /\b(gte|gt|lt|lte)\b/g,
+      (match) => `$${match}`
+    );
+
+    // console.log(JSON.parse(queryString));
+    let query = Tour.find(JSON.parse(queryString));
+
+    // 3. Sorting
+    if (req.query.sort) {
+      const sortBy = req.query.sort.split(',').join(' ');
+      query = query.sort(sortBy);
+    } else {
+      query = query.sort('-createdAt'); //sort by date
+    }
+
+    // 4. Field limiting (requesting only certain fields)
+
+    if (req.query.fields) {
+      const fields = req.query.fields.split(',').join(' ');
+      query = query.select(fields);
+    } else {
+      query = query.select('-__v');
+    }
+
+    // pagination
+    const page = req.query.page * 1 || 1;
+    const limit = req.query.limit * 1 || 100;
+    const skip = (page - 1) * limit;
+
+    query = query.skip(skip).limit(limit);
+
+    if (req.query.page) {
+      const numTours = await Tour.countDocuments();
+      if (skip >= numTours) throw new Error('the page doesnt exist');
+    }
+
+    // const tours = await Tour.find()
+    //   .where('duration')
+    //   .equals(5)
+    //   .where('difficulty')
+    //   .equals('easy');
+
+    const tours = await query;
+
     res.status(200).json({
       status: 'success',
       results: tours.length,
@@ -85,18 +146,23 @@ exports.updateTour = async (req, res) => {
   //     message: 'Incorrect Field',
   //   });
   // }
-
-  res.send('yes tour updated!!');
 };
 
-exports.deleteTour = (req, res) => {
-  // const tour = getTourWithId(req.params.id * 1);
-  //add logic to delete the resource
-  res.status(204).json({
-    //204 means no content in body
-    status: 'success',
-    data: null,
-  });
+exports.deleteTour = async (req, res) => {
+  try {
+    const tour = await Tour.findByIdAndDelete(req.params.id);
+    //add logic to delete the resource
+    res.status(204).json({
+      //204 means no content in body
+      status: 'success',
+      data: tour,
+    });
+  } catch (err) {
+    res.status(401).json({
+      status: 'fail',
+      message: err,
+    });
+  }
 };
 
 exports.createTour = async (req, res) => {
@@ -111,7 +177,7 @@ exports.createTour = async (req, res) => {
   } catch (err) {
     res.status(400).json({
       status: 'fail',
-      message: err,
+      message: 'Invalid data sent!',
     });
   }
 };
