@@ -1,6 +1,7 @@
 const express = require('express');
 
 const morgan = require('morgan');
+const cors = require('cors');
 
 //MY IMPORTS
 const AppError = require('./utils/appError');
@@ -13,6 +14,11 @@ const app = express();
 
 //MIDDLEWARES
 app.use(express.json()); //to access the body of a post request we need to use a middleware
+const corsOptions = {
+  origin: ['http://www.example.com/', 'http://localhost:5500'],
+  optionsSuccessStatus: 200, // For legacy browser support
+};
+app.use(cors());
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));

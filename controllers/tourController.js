@@ -1,6 +1,7 @@
 const fs = require('fs');
 const Tour = require('../models/tourModel');
 const APIFeatures = require('../utils/apiFeatures');
+const AppError = require('../utils/appError');
 
 // It is a good practice to check for errors in middleware like invaild id so the request doesn't go the the next phase! it keeps the controllers clean
 // exports.checkValidId = (req, res, next, val) => {
@@ -173,22 +174,25 @@ exports.deleteTour = async (req, res) => {
   }
 };
 
-exports.createTour = async (req, res) => {
-  try {
-    const tour = await Tour.create(req.body);
-    res.status(201).json({
-      status: 'success',
-      data: {
-        tour,
-      },
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err.message,
-    });
-  }
+const catchAsync = (fn) => {
+  return (req, res, next) => {
+    let statusCode = req.method === 'POST' ? 400 : 500;
+    fn(req, res, next).catch((err) =>
+      next(new AppError(err.message, statusCode))
+    );
+  };
 };
+
+exports.createTour = catchAsync(async (req, res, next) => {
+  const tour = await Tour.create(req.body);
+
+  res.status(201).json({
+    status: 'success',
+    data: {
+      tour,
+    },
+  });
+});
 
 exports.getTourStats = async (req, res) => {
   try {
